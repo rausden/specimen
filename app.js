@@ -245,7 +245,7 @@
     const fams = (t.families || []).map((x) => esc(x.name) + (x.year ? ` <span class="num">${x.year}</span>` : "")).join("<br>");
     const related = (t.related || []).map((s) => T.get(s)).filter(Boolean);
     insp.innerHTML = `
-      ${ok ? `<div class="sp-hero"><img src="${src(t.slug)}" alt=""><span class="mode">${c.m}${c.fs ? ` · ${c.fs}px` : ""}</span></div>` : `<div class="sp-hero none"><b>${esc(t.name)}</b><span class="mode">${stateLabel(c)}</span></div>`}
+      ${ok ? `<div class="sp-hero"><img src="${src(t.slug)}" alt=""><span class="mode">${c.m ? esc(c.m) + (c.fs ? ` · ${c.fs}px` : "") : ""}</span></div>` : `<div class="sp-hero none"><b>${esc(t.name)}</b><span class="mode">${stateLabel(c)}</span></div>`}
       <div class="sp-title"><b>${esc(t.name)}</b><span>${t.foundries.length ? t.foundries.map((s, i) => link("foundry", s, t.fnames[i])).join(" · ") : esc(t.fname)}${f && f.location ? ` · ${esc(f.location)}` : ""}</span></div>
       <div class="sp-facts">
         ${fact("Designer", t.designers.map((d, i) => link("designer", d, t.dnames[i])).join(", "))}
