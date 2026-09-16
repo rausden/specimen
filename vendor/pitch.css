@@ -1,0 +1,132 @@
+/* =====================================================================
+   PITCH — the style set. BEZEL (Apple dark) underneath, Pitch on top.
+   Load AFTER vendor/bezel.css. Never edit bezel.css for this.
+
+   The midpoint, in one line: Apple's controls do the talking, PMA Sans does
+   the naming and the numbers, and nothing on the panel has a colour of its
+   own — colour is always the work on the stage.
+   ===================================================================== */
+
+
+:root {
+  /* super dark — Ryan, 10 Sep 2026: "the UI feels a little bit too light" */
+  --bz-bg: #000000; --bz-bg-2: #0A0A0B; --bz-bg-3: #161618; --bz-el: #0A0A0B; --bz-el-2: #161618; --bz-el-3: #222224;
+  --bz-label: rgba(255,255,255,.90); --bz-label-2: rgba(255,255,255,.55); --bz-label-3: rgba(255,255,255,.35); --bz-label-4: rgba(255,255,255,.18);
+  --bz-sep: rgba(255,255,255,.06); --bz-sep-mac: rgba(255,255,255,.06); --bz-hairline: rgba(255,255,255,.06);
+  --bz-fill: rgba(255,255,255,.14); --bz-fill-2: rgba(255,255,255,.12); --bz-fill-3: rgba(255,255,255,.10); --bz-fill-4: rgba(255,255,255,.07);
+  /* Pitch has no tint. Accent is white, selection is grey, the ring is white. */
+  --bz-accent: #FFFFFF;
+  --bz-on-accent: #000000;
+  --bz-ring: rgba(255,255,255,.35);
+  --bz-sel: #3A3A3C;
+  --bz-sel-inactive: #2C2C2E;
+  /* the Pitch face */
+  --pt-mono: "PMA Sans", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --pt-eyebrow: 400 11px/14px var(--pt-mono);
+  --pt-track: .08em;
+  /* shell */
+  --bz-side: 260px;
+  --pt-inspector: 320px;
+  --bz-topbar: 44px;
+  --pt-transport: 44px;
+}
+
+/* ---- the mark ------------------------------------------------------ */
+.pt-mark { font-family: var(--pt-mono); font-weight: 400; letter-spacing: -.02em; line-height: .9; white-space: nowrap; color: var(--bz-label); }
+.pt-mark sup { font-size: .16em; vertical-align: top; position: relative; top: .55em; margin-left: .12em; letter-spacing: 0; }
+.pt-mark.hero { font-size: clamp(88px, 15.5vw, 224px); }
+.pt-mark.small { font-size: 20px; line-height: 1; }
+.pt-mark.small sup { font-size: .42em; top: -.1em; }
+
+/* ---- PMA where Pitch speaks: eyebrows, readouts, units ------------- */
+.pt-eyebrow, .bz-section > summary, .bz-panel-body > h3, .bz-rail-head, .bz-row-head {
+  font: var(--pt-eyebrow); letter-spacing: var(--pt-track); text-transform: uppercase; color: var(--bz-label-3);
+}
+.bz-section > summary { height: 36px; }
+.bz-section > summary:hover { color: var(--bz-label-2); }
+.bz-slider > output, .bz-tele, .pt-readout, .pt-num { font-family: var(--pt-mono); font-variant-numeric: tabular-nums; }
+.bz-slider > output { font-size: 11px; color: var(--bz-label-2); letter-spacing: 0; }
+.pt-readout { font-size: 12px; line-height: 1; color: var(--bz-label-2); white-space: nowrap; }
+.pt-readout b { font-weight: 400; color: var(--bz-label); }
+
+/* monochrome controls: white accent needs a dark knob and a quiet fill */
+.bz-switch input:checked + i::after { background: #000; }
+.bz-switch input:checked + i { background: var(--bz-label); }
+.bz-check input:checked + i::after { border-color: #000; }
+.bz-radio input:checked + i::after { background: #000; }
+.bz-select::after { background-color: var(--bz-fill); }
+.bz-btn.primary { background: var(--bz-label); color: #000; box-shadow: none; }
+.bz-btn.tint { background: rgba(255,255,255,.10); color: var(--bz-label); }
+.bz-btn.ghost { color: var(--bz-label-2); }
+.bz-btn.ghost:hover { color: var(--bz-label); }
+.bz-slider input[type=range]::-webkit-slider-runnable-track { background: linear-gradient(90deg, rgba(255,255,255,.55) var(--p), rgba(255,255,255,.14) var(--p)); }
+.bz-tile.on { box-shadow: 0 0 0 2px var(--bz-label); }
+.bz-progress i { background: var(--bz-label); }
+
+/* ---- the shell every Pitch tool shares ----------------------------- */
+.pt-app { display: grid; grid-template-rows: var(--bz-topbar) 1fr var(--pt-transport); height: 100%; background: var(--bz-bg); }
+.pt-bar {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 16px; z-index: 2;
+  background: rgba(28,28,30,.72); -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
+  border-bottom: 1px solid var(--bz-sep);
+}
+.pt-bar .l { display: flex; align-items: center; gap: 14px; }
+.pt-bar .r { justify-self: end; display: flex; align-items: center; gap: 10px; }
+.pt-body { display: grid; grid-template-columns: var(--bz-side) 1fr var(--pt-inspector); min-height: 0; }
+.pt-side, .pt-inspector { background: var(--bz-bg-2); overflow: auto; min-height: 0; }
+.pt-side { border-right: 1px solid var(--bz-sep); }
+.pt-inspector { border-left: 1px solid var(--bz-sep); }
+.pt-stage { position: relative; display: grid; place-items: center; padding: 24px; min-width: 0; min-height: 0; overflow: hidden; }
+.pt-transport {
+  display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: 16px; padding: 0 12px 0 8px;
+  background: var(--bz-bg-2); border-top: 1px solid var(--bz-sep);
+}
+.pt-transport .scrub { display: grid; grid-template-columns: 1fr; }
+.pt-transport .scrub input[type=range] { --p: 32%; appearance: none; width: 100%; height: 24px; margin: 0; background: transparent; }
+.pt-transport .scrub input[type=range]::-webkit-slider-runnable-track { height: 3px; border-radius: 2px; background: linear-gradient(90deg, rgba(255,255,255,.8) var(--p), rgba(255,255,255,.14) var(--p)); }
+.pt-transport .scrub input[type=range]::-webkit-slider-thumb { appearance: none; width: 12px; height: 12px; margin-top: -4.5px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
+.pt-transport .out { display: flex; align-items: center; gap: 6px; }
+.pt-play { width: 28px; height: 28px; border-radius: 50%; background: var(--bz-fill-3); display: grid; place-items: center; color: var(--bz-label); }
+.pt-play::before { content: ""; width: 0; height: 0; border-left: 9px solid currentColor; border-top: 6px solid transparent; border-bottom: 6px solid transparent; margin-left: 2px; }
+
+/* sidebar/inspector internals — sections, rows, props */
+.pt-section { border-bottom: 1px solid var(--bz-sep); }
+.pt-section > summary { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px; list-style: none; cursor: default; user-select: none; font: var(--pt-eyebrow); letter-spacing: var(--pt-track); text-transform: uppercase; color: var(--bz-label-3); }
+.pt-section > summary::-webkit-details-marker { display: none; }
+.pt-section > summary::before { content: ""; width: 5px; height: 5px; margin: 0 3px 0 -1px; border-right: 1.5px solid var(--bz-label-3); border-bottom: 1.5px solid var(--bz-label-3); transform: rotate(-45deg); transition: transform 200ms var(--spring-snappy); }
+.pt-section[open] > summary::before { transform: rotate(45deg); }
+.pt-section > summary:hover { color: var(--bz-label-2); }
+.pt-section > summary .count { margin-left: auto; color: var(--bz-label-4); letter-spacing: 0; }
+.pt-props { display: flex; flex-direction: column; gap: 2px; padding: 2px 16px 14px; }
+.pt-props .bz-slider { --bz-label-col: 96px; grid-template-columns: var(--bz-label-col) 1fr 60px; }
+.pt-props .bz-slider > output { white-space: nowrap; }
+.pt-props .bz-field { margin: 4px 0; }
+.pt-props .bz-field > .bz-label { font-size: 12px; }
+.pt-props .bz-seg { align-self: flex-start; }
+.pt-props .bz-seg.full { align-self: stretch; }
+.pt-props .bz-seg.full > button { flex: 1 1 0; min-width: 0; padding: 0 6px; overflow: hidden; text-overflow: ellipsis; }
+.pt-props .row { display: flex; align-items: center; gap: 8px; min-height: 28px; flex-wrap: wrap; }
+.pt-props .row > .bz-label { min-width: 104px; }
+.pt-props .row.wrap { flex-wrap: wrap; }
+.pt-hint { font-size: 12px; line-height: 16px; color: var(--bz-label-3); margin: 2px 0 6px; }
+
+.pt-list { display: flex; flex-direction: column; padding: 0 8px 10px; }
+.pt-item { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; min-height: 32px; padding: 0 8px; border-radius: 6px; font-size: 13px; letter-spacing: var(--trk-13); color: var(--bz-label); }
+.pt-item:hover { background: rgba(255,255,255,.05); }
+.pt-item.on { background: var(--bz-sel); }
+.pt-item > .t { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pt-item > .t small { display: block; font-size: 11px; line-height: 14px; color: var(--bz-label-2); }
+.pt-item > .e { font-family: var(--pt-mono); font-size: 11px; color: var(--bz-label-3); }
+.pt-item .thumb { width: 28px; height: 28px; border-radius: 5px; background: var(--bz-bg-3); }
+.pt-item .sw { display: inline-flex; gap: 3px; }
+.pt-item .sw i { width: 14px; height: 14px; border-radius: 50%; }
+.pt-item .star { color: var(--bz-label); }
+.pt-item .bz-badge { font-family: var(--pt-mono); font-weight: 400; letter-spacing: var(--pt-track); text-transform: uppercase; font-size: 10px; }
+.pt-add { margin: 4px 16px 14px; }
+
+/* stage frames: the mock's stand-ins for the work */
+.pt-frame { position: relative; background: #f1f0ec; overflow: hidden; box-shadow: 0 0 0 1px rgba(255,255,255,.06); }
+.pt-frame.sq { width: min(100%, calc(100vh - 200px)); aspect-ratio: 1; }
+.pt-frame.tall { height: calc(100vh - 160px); aspect-ratio: 4 / 5; max-width: 100%; }
+.pt-dot { position: absolute; width: 22%; aspect-ratio: 1; border-radius: 50%; filter: blur(14px); }
+.pt-dot::after { content: ""; position: absolute; inset: 28%; border-radius: 50%; background: var(--c2); }

@@ -1,0 +1,577 @@
+/* =====================================================================
+   PITCH — the tool register. "Pitch's shapes, Apple's discipline, super dark."
+   Ryan, 10 Sep 2026: the original tools' blocky look is the base; its UI/UX
+   is what gets fixed. Then: "more visual and dyslexic-friendly … this feels
+   very clinical" — so a visual layer on top: pictograms for arrangements,
+   thumbnails for looks, a glyph on every section head, bars before numbers.
+
+   Shapes: radius 0, 1 px hairlines at 10 % white, ON = inverse (off-white
+   box, black type), sliders a 1 px track with a 2×12 white bar cursor and the
+   filled part at 45 %, square checkboxes, hairline buttons, ONE inverse
+   primary per surface. Discipline: section head → rows, pop-ups over button
+   rows, no prose, state always visible, nothing over the work.
+   Type: PMA Sans is the feature — the mark, section heads, numbers,
+   timecode, lane names. Everything else is the Apple system stack (SF on a
+   Mac, Segoe on Windows), sentence case, 12 px. Nothing under 10 px.
+   Colour: stage #000, panels #0A0A0A, fields #111, text 90 / 65 / 40 %.
+   White only for ON, the primary, the value being edited, the playhead.
+   Timeline lane colours come from the work, never from the UI.
+   ===================================================================== */
+
+:root {
+  /* wide monitors: everything scales with the viewport; 1× at 1440, 1.5× at 2160+ (Ryan, 10 Sep 2026) */
+  --px: clamp(1px, calc(100vw / 1440), 1.5px);   /* one scaled pixel: 1px at 1440, 1.5px at 2160+ */
+  --pr-stage: #000000;
+  --pr-panel: #0A0A0A;
+  --pr-field: #111111;
+  --pr-hover: #161616;
+  --pr-hair: rgba(255,255,255,.10);
+  --pr-hair-2: rgba(255,255,255,.06);
+  --pr-t1: rgba(255,255,255,.90);
+  --pr-t2: rgba(255,255,255,.65);
+  --pr-t3: rgba(255,255,255,.40);
+  --pr-on: #E9E7E3;
+  --pr-on-ink: #111111;
+  --pr-white: #FFFFFF;
+  --pr-row: calc(24 * var(--px));
+  --pr-head: calc(30 * var(--px));
+  --pr-pad: calc(8 * var(--px));
+  --pr-gap: calc(4 * var(--px));
+  --pr-side: clamp(232px, 16vw, 340px);
+  --pr-insp: clamp(300px, 21vw, 420px);
+  --pr-font: -apple-system, "SF Pro Text", system-ui, "Segoe UI Variable Text", "Segoe UI", sans-serif;
+  --pr-mono: "PMA Sans", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --pr-caps: 400 calc(11 * var(--px)) / calc(14 * var(--px)) var(--pr-mono);
+  --pr-track: .10em;
+}
+
+.pr { height: 100%; font: calc(12 * var(--px)) / calc(16 * var(--px)) var(--pr-font); color: var(--pr-t2); letter-spacing: 0; -webkit-font-smoothing: antialiased; }
+.pr * { box-sizing: border-box; }
+.pr button, .pr select, .pr input { font: inherit; color: inherit; letter-spacing: inherit; }
+.pr button { background: none; border: 0; cursor: default; border-radius: 0; }
+/* PMA caps: heads and lane names only */
+.pr-head > .t, .pr-tag, .pr-bar .name, .pr-picto b, .pr-tabs.tools > button { font: var(--pr-caps); letter-spacing: var(--pr-track); text-transform: uppercase; }
+.pr .num { font-family: var(--pr-mono); font-variant-numeric: tabular-nums; }
+
+/* ---- app grid ------------------------------------------------------ */
+.pr-app { display: grid; grid-template-rows: calc(40 * var(--px)) 1fr auto; height: 100%; background: var(--pr-stage); }
+.pr-app[data-mode="simple"] { --pr-row: calc(28 * var(--px)); }
+.pr-app[data-mode="simple"] .deep { display: none !important; }
+
+/* ---- bar ----------------------------------------------------------- */
+.pr-bar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 calc(12 * var(--px)); background: var(--pr-panel); border-bottom: 1px solid var(--pr-hair); }
+.pr-bar .l { display: flex; align-items: center; gap: calc(14 * var(--px)); }
+.pr-bar .r { justify-self: end; display: flex; align-items: center; gap: calc(14 * var(--px)); }
+.pr-back { display: inline-flex; align-items: center; gap: calc(6 * var(--px)); height: calc(24 * var(--px)); padding: 0 calc(6 * var(--px)) 0 calc(2 * var(--px)); color: var(--pr-t2); font-size: calc(12 * var(--px)); }
+.pr-back:hover { color: var(--pr-white); }
+.pr-bar .pt-mark { font-size: calc(17 * var(--px)); line-height: 1; color: var(--pr-t1); }
+
+.pr-bar .name { color: var(--pr-t3); }
+.pr-tabs { display: inline-flex; height: calc(24 * var(--px)); }
+.pr-tabs > button { padding: 0 calc(12 * var(--px)); color: var(--pr-t2); border: 1px solid var(--pr-hair); margin-left: -1px; line-height: calc(22 * var(--px)); font-size: calc(12 * var(--px)); }
+.pr-tabs > button:first-child { margin-left: 0; }
+.pr-tabs > button.on { background: var(--pr-on); color: var(--pr-on-ink); border-color: var(--pr-on); position: relative; z-index: 1; }
+.pr-tabs > button:not(.on):hover { color: var(--pr-t1); }
+.pr-undo { display: inline-flex; gap: calc(2 * var(--px)); }
+.pr-undo button { width: calc(24 * var(--px)); height: calc(24 * var(--px)); color: var(--pr-t3); display: grid; place-items: center; }
+.pr-undo button:hover { color: var(--pr-t1); }
+.pr-undo svg { width: calc(12 * var(--px)); height: calc(12 * var(--px)); fill: none; stroke: currentColor; stroke-width: 1.2; stroke-linecap: square; }
+
+/* ---- body ---------------------------------------------------------- */
+.pr-body { display: grid; grid-template-columns: var(--pr-side) 1fr var(--pr-insp); min-height: 0; }
+.pr-side, .pr-insp { background: var(--pr-panel); overflow: auto; min-height: 0; padding-bottom: calc(12 * var(--px)); }
+.pr-side { border-right: 1px solid var(--pr-hair); }
+.pr-insp { border-left: 1px solid var(--pr-hair); }
+.pr-stage { position: relative; display: grid; place-items: center; padding: calc(20 * var(--px)); min-width: 0; min-height: 0; overflow: hidden; background: var(--pr-stage); }
+.pr-stage .pt-frame.tall { height: min(100%, calc((100vw - var(--pr-side) - var(--pr-insp) - 40px) * 5 / 4)); width: auto; }
+.pr-stage .pt-frame.sq { height: min(100%, calc(100vw - var(--pr-side) - var(--pr-insp) - 40px)); width: auto; }
+
+/* ---- sections & rows ----------------------------------------------- */
+.pr-sec { border-bottom: 1px solid var(--pr-hair); padding-bottom: calc(8 * var(--px)); margin-bottom: calc(4 * var(--px)); }
+.pr-head { display: flex; align-items: center; gap: calc(8 * var(--px)); height: var(--pr-head); padding: 0 var(--pr-pad) 0 calc(12 * var(--px)); color: var(--pr-t2); user-select: none; }
+.pr-head .g { width: calc(14 * var(--px)); height: calc(14 * var(--px)); display: grid; place-items: center; color: var(--pr-t2); }
+.pr-head .g svg { width: calc(12 * var(--px)); height: calc(12 * var(--px)); fill: none; stroke: currentColor; stroke-width: 1.2; }
+.pr-head .t { flex: 1; }
+.pr-head .disc { color: var(--pr-t3); font-size: calc(12 * var(--px)); width: calc(12 * var(--px)); text-align: center; }
+.pr-sec.closed .pr-rows, .pr-sec.closed .pr-list, .pr-sec.closed .pr-picto, .pr-sec.closed .pr-actions { display: none; }
+.pr-sec.closed { padding-bottom: 0; }
+.pr-head .reset { color: var(--pr-t3); opacity: 0; font-size: calc(12 * var(--px)); width: calc(16 * var(--px)); }
+.pr-head:hover .reset { opacity: 1; }
+.pr-head .reset:hover { color: var(--pr-t1); }
+.pr-rows { padding: 0 var(--pr-pad) 0 calc(12 * var(--px)); display: flex; flex-direction: column; gap: var(--pr-gap); }
+.pr-row { display: grid; grid-template-columns: calc(96 * var(--px)) 1fr minmax(calc(58 * var(--px)), max-content); align-items: center; gap: calc(8 * var(--px)); height: var(--pr-row); transition: background 80ms; }
+.pr-row.hi { background: var(--pr-hover); box-shadow: 0 0 0 calc(4 * var(--px)) var(--pr-hover); }
+.pr-row > .k { color: var(--pr-t2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pr-row > .v { text-align: right; color: var(--pr-t1); font-family: var(--pr-mono); font-variant-numeric: tabular-nums; font-size: calc(12 * var(--px)); white-space: nowrap; padding: calc(2 * var(--px)) calc(3 * var(--px)); margin-right: -3px; cursor: ew-resize; }
+.pr-row > .v small { color: var(--pr-t3); font-family: var(--pr-font); font-size: calc(10 * var(--px)); margin-left: calc(3 * var(--px)); }
+.pr-row > .v:hover { background: var(--pr-field); }
+.pr-row > .v.edit { background: var(--pr-white); color: var(--pr-on-ink); }
+.pr-row > .v.edit small { color: rgba(0,0,0,.6); }
+.pr-row > .w { grid-column: 2 / -1; display: flex; justify-content: flex-end; align-items: center; gap: calc(6 * var(--px)); min-width: 0; }
+.pr-row > .w.start { justify-content: flex-start; }
+.pr-row > .w > .pr-seg, .pr-row > .w > .pr-pop.full { flex: 1 1 auto; }
+.pr-row.nolabel { grid-template-columns: 1fr; }
+.pr-row.nolabel > .k { display: none; }
+.pr-row.nolabel > .w { grid-column: 1 / -1; }
+
+/* slider: 1 px track at 18 %, fill 45 %, 2×12 white bar cursor */
+.pr-sl { --p: 50%; position: relative; height: calc(16 * var(--px)); }
+.pr-sl input[type=range] { appearance: none; width: 100%; height: calc(16 * var(--px)); margin: 0; background: transparent; cursor: ew-resize; }
+.pr-sl input[type=range]::-webkit-slider-runnable-track { height: 1px; background: linear-gradient(90deg, rgba(255,255,255,.45) var(--p), rgba(255,255,255,.18) var(--p)); }
+.pr-sl input[type=range]::-webkit-slider-thumb { appearance: none; width: calc(2 * var(--px)); height: calc(12 * var(--px)); margin-top: -5.5px; border-radius: 0; background: var(--pr-white); }
+.pr-sl input[type=range]:active::-webkit-slider-thumb { width: calc(3 * var(--px)); }
+
+/* pop-up: hairline box, small ⌄, opens a menu */
+.pr-pop { position: relative; display: inline-flex; align-items: center; height: calc(22 * var(--px)); padding: 0 calc(22 * var(--px)) 0 calc(8 * var(--px)); border: 1px solid var(--pr-hair); color: var(--pr-t1); white-space: nowrap; background: var(--pr-panel); flex: 0 0 auto; font-size: calc(12 * var(--px)); }
+.pr-pop::after { content: ""; position: absolute; right: calc(8 * var(--px)); top: 50%; width: calc(5 * var(--px)); height: calc(5 * var(--px)); margin-top: -4px; border-right: 1px solid var(--pr-t2); border-bottom: 1px solid var(--pr-t2); transform: rotate(45deg); }
+.pr-pop:hover { background: var(--pr-field); }
+.pr-pop.full { width: 100%; }
+.pr-menu { position: fixed; z-index: 50; min-width: calc(160 * var(--px)); background: #0d0d0d; border: 1px solid var(--pr-hair); box-shadow: 0 calc(8 * var(--px)) calc(24 * var(--px)) rgba(0,0,0,.6); padding: calc(4 * var(--px)) 0; }
+.pr-menu > div { height: calc(24 * var(--px)); line-height: calc(24 * var(--px)); padding: 0 calc(10 * var(--px)); color: var(--pr-t1); font-size: calc(12 * var(--px)); white-space: nowrap; }
+.pr-menu > div:hover { background: var(--pr-on); color: var(--pr-on-ink); }
+.pr-menu > hr { border: 0; border-top: 1px solid var(--pr-hair); margin: calc(4 * var(--px)) 0; }
+
+/* segmented: hairline boxes, ON inverse */
+.pr-seg { display: inline-flex; height: calc(22 * var(--px)); }
+.pr-seg > button { flex: 1 1 0; min-width: 0; padding: 0 calc(8 * var(--px)); color: var(--pr-t2); border: 1px solid var(--pr-hair); margin-left: -1px; line-height: calc(20 * var(--px)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: calc(12 * var(--px)); }
+.pr-seg > button:first-child { margin-left: 0; }
+.pr-seg > button.on { background: var(--pr-on); color: var(--pr-on-ink); border-color: var(--pr-on); position: relative; z-index: 1; }
+.pr-seg > button:not(.on):hover { color: var(--pr-t1); background: var(--pr-field); }
+.pr-seg.full { width: 100%; }
+
+/* checkbox: 12 px square, ON inverse with an inset mark */
+.pr-check { display: inline-flex; align-items: center; gap: calc(8 * var(--px)); height: var(--pr-row); color: var(--pr-t2); user-select: none; }
+.pr-check i { position: relative; width: calc(12 * var(--px)); height: calc(12 * var(--px)); border: 1px solid var(--pr-hair); background: var(--pr-field); }
+.pr-check.on i { background: var(--pr-on); border-color: var(--pr-on); }
+.pr-check.on i::after { content: ""; position: absolute; inset: calc(3 * var(--px)); background: var(--pr-on-ink); }
+.pr-check.on { color: var(--pr-t1); }
+
+/* field */
+.pr-field { height: calc(22 * var(--px)); width: 100%; padding: 0 calc(6 * var(--px)); border: 1px solid var(--pr-hair); background: var(--pr-field); color: var(--pr-t1); font: calc(12 * var(--px))/calc(20 * var(--px)) var(--pr-font); outline: none; }
+.pr-field:focus { border-color: var(--pr-t2); color: var(--pr-white); }
+.pr-row .w .pr-field { width: calc(64 * var(--px)); }
+.pr-row .w .pr-field.wide { width: 100%; }
+
+/* buttons: hairline boxes; ONE primary per surface */
+.pr-btn { display: inline-flex; align-items: center; justify-content: center; height: calc(22 * var(--px)); padding: 0 calc(10 * var(--px)); border: 1px solid var(--pr-hair); color: var(--pr-t1); white-space: nowrap; background: var(--pr-panel); flex: 0 0 auto; font-size: calc(12 * var(--px)); }
+.pr-btn:hover { background: var(--pr-field); }
+.pr-btn.primary { background: var(--pr-on); color: var(--pr-on-ink); border-color: var(--pr-on); }
+.pr-btn.primary:hover { background: var(--pr-white); }
+.pr-btn.pop { padding-right: calc(22 * var(--px)); position: relative; }
+.pr-btn.pop::after { content: ""; position: absolute; right: calc(8 * var(--px)); top: 50%; width: calc(5 * var(--px)); height: calc(5 * var(--px)); margin-top: -4px; border-right: 1px solid currentColor; border-bottom: 1px solid currentColor; transform: rotate(45deg); }
+.pr-btn.icon { width: calc(22 * var(--px)); padding: 0; }
+.pr-btn.icon svg { width: calc(10 * var(--px)); height: calc(10 * var(--px)); fill: currentColor; }
+
+/* colour swatches: squares */
+.pr-sw { display: inline-flex; gap: calc(2 * var(--px)); }
+.pr-sw i { width: calc(12 * var(--px)); height: calc(12 * var(--px)); border: 1px solid rgba(0,0,0,.6); }
+.pr-swatch { width: calc(22 * var(--px)); height: calc(22 * var(--px)); border: 1px solid var(--pr-hair); }
+
+/* pictograms: the arrangement as a picture, name under, ON inverse */
+.pr-picto { display: grid; grid-template-columns: 1fr 1fr; gap: calc(6 * var(--px)); padding: 0 var(--pr-pad) 0 calc(12 * var(--px)); }
+.pr-picto > button { display: grid; justify-items: center; gap: calc(4 * var(--px)); padding: calc(8 * var(--px)) calc(4 * var(--px)) calc(6 * var(--px)); border: 1px solid var(--pr-hair); color: var(--pr-t2); background: var(--pr-panel); }
+.pr-picto > button svg { width: calc(40 * var(--px)); height: calc(40 * var(--px)); fill: none; stroke: currentColor; stroke-width: 1.2; stroke-linecap: square; }
+.pr-picto > button svg .f { fill: currentColor; stroke: none; }
+.pr-picto > button b { font-weight: 400; color: inherit; }
+.pr-picto > button:hover { background: var(--pr-field); color: var(--pr-t1); }
+.pr-picto > button.on { background: var(--pr-on); color: var(--pr-on-ink); border-color: var(--pr-on); }
+.pr-picto > button .key { font-family: var(--pr-mono); font-size: calc(10 * var(--px)); color: var(--pr-t3); justify-self: start; position: absolute; }
+.pr-picto > button { position: relative; }
+.pr-picto > button .key { left: calc(6 * var(--px)); top: calc(4 * var(--px)); }
+.pr-picto > button.on .key { color: rgba(0,0,0,.5); }
+
+/* lists: hairline rows, selection a 2 px bar at the left */
+.pr-list { display: flex; flex-direction: column; margin: 0 var(--pr-pad) 0 calc(12 * var(--px)); border-top: 1px solid var(--pr-hair-2); }
+.pr-item { position: relative; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: calc(8 * var(--px)); min-height: var(--pr-row); padding: calc(2 * var(--px)) calc(6 * var(--px)); color: var(--pr-t2); border-bottom: 1px solid var(--pr-hair-2); }
+.pr-item:hover { background: var(--pr-hover); }
+.pr-item.on { color: var(--pr-t1); }
+.pr-item.on::before { content: ""; position: absolute; left: -12px; top: 0; bottom: -1px; width: calc(2 * var(--px)); background: var(--pr-white); }
+.pr-item .t { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pr-item .t small { display: block; color: var(--pr-t3); font-size: calc(11 * var(--px)); }
+.pr-item .meta { font-family: var(--pr-mono); font-size: calc(10 * var(--px)); color: var(--pr-t3); letter-spacing: .04em; }
+.pr-item.on .meta { color: var(--pr-t2); }
+.pr-item .thumb { width: calc(22 * var(--px)); height: calc(22 * var(--px)); background: var(--pr-field); }
+.pr-item .look { width: calc(36 * var(--px)); height: calc(27 * var(--px)); background: var(--pr-field); position: relative; overflow: hidden; }
+.pr-item .look i { position: absolute; border-radius: 50%; filter: blur(2px); }
+.pr-item .star { color: var(--pr-white); font-size: calc(10 * var(--px)); }
+.pr-actions { display: flex; align-items: center; gap: calc(6 * var(--px)); padding: calc(8 * var(--px)) var(--pr-pad) 0 calc(12 * var(--px)); }
+
+/* ---- transport: the heart, open by default -------------------------- */
+.pr-transport { display: grid; grid-template-rows: calc(32 * var(--px)) auto; background: var(--pr-panel); border-top: 1px solid var(--pr-hair); --lane: calc(28 * var(--px)); }
+.pr-app.lanes .pr-transport { --lane: calc(40 * var(--px)); }
+.pr-tbar { display: grid; grid-template-columns: auto auto 1fr auto auto auto; align-items: center; gap: calc(14 * var(--px)); padding: 0 calc(10 * var(--px)); border-bottom: 1px solid var(--pr-hair-2); }
+.pr-tbar .ctl { display: inline-flex; gap: calc(2 * var(--px)); }
+.pr-tbar .ctl button { width: calc(24 * var(--px)); height: calc(24 * var(--px)); color: var(--pr-t2); display: grid; place-items: center; }
+.pr-tbar .ctl button.play { width: calc(28 * var(--px)); height: calc(28 * var(--px)); border: 1px solid var(--pr-hair); }
+.pr-tbar .ctl button:hover { color: var(--pr-white); background: var(--pr-field); }
+.pr-tbar .ctl svg { width: calc(10 * var(--px)); height: calc(10 * var(--px)); fill: currentColor; }
+.pr-tc { display: inline-flex; align-items: baseline; gap: calc(5 * var(--px)); font-family: var(--pr-mono); font-size: calc(12 * var(--px)); color: var(--pr-t3); white-space: nowrap; }
+.pr-tc b { font-weight: 400; color: var(--pr-white); }
+.pr-tc .len { color: var(--pr-t1); padding: 1px calc(3 * var(--px)); cursor: ew-resize; border-bottom: 1px dotted var(--pr-t3); }
+.pr-tc .len:hover { background: var(--pr-field); }
+.pr-tc small { font-family: var(--pr-font); font-size: calc(10 * var(--px)); color: var(--pr-t3); }
+.pr-tbar .pops { display: inline-flex; gap: calc(6 * var(--px)); }
+.pr-zoom { display: inline-flex; align-items: center; gap: calc(6 * var(--px)); color: var(--pr-t3); }
+.pr-zoom .pr-sl { width: calc(72 * var(--px)); }
+.pr-zoom span { font-size: calc(12 * var(--px)); line-height: 1; }
+.pr-tbar .out { display: inline-flex; align-items: center; gap: calc(6 * var(--px)); }
+.pr-tl { position: relative; overflow: hidden; padding: 0 calc(10 * var(--px)) calc(8 * var(--px)) calc(244 * var(--px)); }
+.pr-ruler { position: relative; height: calc(18 * var(--px)); background: repeating-linear-gradient(90deg, var(--pr-hair) 0 1px, transparent 1px 12.5%); font-family: var(--pr-mono); font-size: calc(10 * var(--px)); color: var(--pr-t3); }
+.pr-ruler span { position: absolute; top: calc(2 * var(--px)); transform: translateX(3px); }
+.pr-lanes { position: relative; display: flex; flex-direction: column; gap: calc(2 * var(--px)); padding-top: calc(2 * var(--px)); }
+.pr-lane { position: relative; height: var(--lane); border-bottom: 1px solid var(--pr-hair-2); transition: background 80ms; }
+.pr-lane.hi { background: var(--pr-hover); }
+.pr-lane .pr-tag { position: absolute; left: calc(-236 * var(--px)); width: calc(228 * var(--px)); top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: calc(6 * var(--px)); color: var(--pr-t2); font-size: calc(11 * var(--px)); white-space: nowrap; overflow: hidden; cursor: pointer; }
+.pr-lane .pr-tag .d { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--pr-t3); font: calc(11 * var(--px)) / 1 var(--pr-font); text-transform: none; letter-spacing: 0; }
+.pr-lane .pr-tag .go { margin-left: auto; width: calc(12 * var(--px)); height: calc(12 * var(--px)); color: var(--pr-t3); flex: 0 0 auto; }
+.pr-lane .pr-tag:hover .go, .pr-lane .pr-tag:hover { color: var(--pr-white); }
+.pr-lane .pr-tag i { flex: 0 0 auto; width: calc(7 * var(--px)); height: calc(7 * var(--px)); background: var(--c, transparent); }
+.pr-lane svg path { vector-effect: non-scaling-stroke; }
+.pr-block { position: absolute; top: 50%; height: calc(12 * var(--px)); margin-top: calc(-6 * var(--px)); background: var(--c, #3a3a3c); box-shadow: inset 0 0 0 1px rgba(0,0,0,.35); opacity: .85; overflow: hidden; font-family: var(--pr-mono); font-size: calc(10 * var(--px)); letter-spacing: .06em; text-transform: uppercase; color: rgba(0,0,0,.75); padding: 1px calc(4 * var(--px)) 0; white-space: nowrap; line-height: 1; }
+.pr-block.thin { height: calc(4 * var(--px)); margin-top: calc(-2 * var(--px)); }
+.pr-block.faint { opacity: .35; }
+.pr-block.on { opacity: 1; box-shadow: 0 0 0 1px var(--pr-white); }
+.pr-lane svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.pr-lane svg path { fill: none; stroke: var(--c, var(--pr-t2)); stroke-width: 1.2; }
+.pr-mark { position: absolute; top: 50%; height: calc(12 * var(--px)); margin-top: calc(-6 * var(--px)); width: calc(6 * var(--px)); margin-left: calc(-3 * var(--px)); background: var(--c, var(--pr-t2)); }
+.pr-mark[data-tip]:hover::after { content: attr(data-tip); position: absolute; left: calc(8 * var(--px)); top: calc(-2 * var(--px)); white-space: nowrap; background: #0d0d0d; border: 1px solid var(--pr-hair); color: var(--pr-t1); font: calc(11 * var(--px)) / calc(14 * var(--px)) var(--pr-font); padding: calc(2 * var(--px)) calc(6 * var(--px)); z-index: 5; }
+.pr-head-line { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--pr-white); z-index: 2; pointer-events: none; }
+.pr-head-line::before { content: ""; position: absolute; top: 0; left: -3px; width: calc(7 * var(--px)); height: calc(7 * var(--px)); background: var(--pr-white); }
+
+/* ---- icons: Lucide (ISC), inlined, stroke 1.5, 65 % white. The only icon set. ---- */
+.pr .ic { width: calc(14 * var(--px)); height: calc(14 * var(--px)); fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; }
+.pr .ic.s { width: calc(12 * var(--px)); height: calc(12 * var(--px)); }
+.pr .ic.f { fill: currentColor; stroke: none; }
+.pr-head .g svg { width: calc(14 * var(--px)); height: calc(14 * var(--px)); }
+.pr-tbar .ctl svg, .pr-undo svg, .pr-btn.icon svg { width: calc(14 * var(--px)); height: calc(14 * var(--px)); fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.pr-tbar .ctl .play svg { width: calc(16 * var(--px)); height: calc(16 * var(--px)); }
+.pr-item .star, .pr-item .star svg { width: calc(12 * var(--px)); height: calc(12 * var(--px)); display: inline-block; vertical-align: -1px; }
+
+/* additive fixes, v0.0.7 review: names never truncate */
+.pr-lane .pr-tag .nm { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: calc(1 * var(--px)); line-height: 1.1; overflow: hidden; }
+.pr-lane .pr-tag .d { display: block; font-size: calc(10 * var(--px)); line-height: 1.1; }
+.pr-item { grid-template-columns: auto minmax(0, 1fr) auto; }
+.pr-item .t { flex: 1 1 auto; min-width: 0; overflow: visible; white-space: normal; }
+.pr-item .meta { max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pr-item .meta { max-width: none; }
+.pr-item .t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pr-item .t small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* the real thing: stills where a still exists, the live tool on the stage */
+.pr-picto .still, .pr-item .still { position: relative; display: block; overflow: hidden; background: var(--pr-field); }
+.pr-picto .still { width: calc(56 * var(--px)); height: calc(56 * var(--px)); }
+.pr-item .still { width: calc(36 * var(--px)); height: calc(27 * var(--px)); }
+.pr-picto .still img, .pr-item .still img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+.pr-picto .still svg { width: calc(40 * var(--px)); height: calc(40 * var(--px)); margin: calc(8 * var(--px)); }
+.pr-picto > button.on .still img { outline: 1px solid var(--pr-on-ink); }
+.pr-live { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: transparent; z-index: 1; }
+.pr-stage.mock .pr-live { display: none; }
+
+/* ---- the home model (Phase 1): canvas · layers · one-thing inspector · layers-in-time ---- */
+.hm-title { display: grid; grid-template-columns: auto 1fr; column-gap: calc(8 * var(--px)); align-items: center; padding: calc(10 * var(--px)) var(--pr-pad) calc(6 * var(--px)) calc(12 * var(--px)); border-bottom: 1px solid var(--pr-hair); }
+.hm-title i { width: calc(10 * var(--px)); height: calc(10 * var(--px)); }
+.hm-title .ic { color: var(--pr-t2); }
+.hm-title b { color: var(--pr-t1); font-weight: 600; }
+.hm-title span { grid-column: 2; color: var(--pr-t3); font-size: calc(11 * var(--px)); }
+.hm-hint { margin-left: auto; color: var(--pr-t3); font: calc(10 * var(--px)) / 1 var(--pr-font); text-transform: none; letter-spacing: 0; }
+.hm-looks { display: flex; gap: calc(6 * var(--px)); padding: 0 var(--pr-pad) 0 calc(12 * var(--px)); overflow-x: auto; }
+.hm-looks > button { display: grid; gap: calc(4 * var(--px)); justify-items: center; padding: calc(4 * var(--px)); border: 1px solid var(--pr-hair); color: var(--pr-t2); font-size: calc(11 * var(--px)); white-space: nowrap; }
+.hm-looks > button.on { background: var(--pr-on); color: var(--pr-on-ink); border-color: var(--pr-on); }
+.hm-looks .still { position: relative; display: block; width: calc(64 * var(--px)); height: calc(48 * var(--px)); overflow: hidden; background: var(--pr-field); }
+.hm-looks .still img { width: 100%; height: 100%; object-fit: cover; }
+.hm-layers { display: flex; flex-direction: column; margin: 0 var(--pr-pad) 0 calc(12 * var(--px)); border-top: 1px solid var(--pr-hair-2); }
+.hm-layer { position: relative; display: grid; grid-template-columns: auto auto auto 1fr; align-items: center; gap: calc(6 * var(--px)); height: calc(26 * var(--px)); padding: 0 calc(4 * var(--px)); color: var(--pr-t2); border-bottom: 1px solid var(--pr-hair-2); cursor: default; }
+.hm-layer:hover { background: var(--pr-hover); }
+.hm-layer.on { color: var(--pr-t1); background: var(--pr-hover); }
+.hm-layer.on::before { content: ""; position: absolute; left: calc(-12 * var(--px)); top: 0; bottom: -1px; width: 2px; background: var(--pr-white); }
+.hm-layer.off { opacity: .45; }
+.hm-layer button { width: calc(18 * var(--px)); height: calc(18 * var(--px)); display: grid; place-items: center; color: var(--pr-t3); }
+.hm-layer button:hover { color: var(--pr-white); }
+.hm-layer i { width: calc(8 * var(--px)); height: calc(8 * var(--px)); }
+.hm-layer .wh { position: absolute; right: calc(6 * var(--px)); color: var(--pr-t3); font-size: calc(10 * var(--px)); max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-canvas { padding: 0; outline: none; overflow: hidden; }
+.hm-field { position: absolute; inset: 0; background: #050505; background-image: radial-gradient(rgba(255,255,255,.06) 1px, transparent 1px); background-size: calc(24 * var(--px)) calc(24 * var(--px)); display: grid; place-items: center; }
+.hm-frame { position: relative; height: 88%; aspect-ratio: 4 / 5; transform-origin: center; box-shadow: 0 0 0 1px var(--pr-hair); }
+.hm-frame .pr-live { position: absolute; inset: 0; }
+.hm-zones { position: absolute; inset: 0; z-index: 2; }
+.hm-zone { position: absolute; border: 1px solid transparent; cursor: move; }
+.hm-zone:hover { border-color: rgba(255,255,255,.35); }
+.hm-zone.on { border-color: var(--pr-white); box-shadow: 0 0 0 1px rgba(0,0,0,.6); }
+.hm-zone.on::after { content: ""; position: absolute; right: -3px; bottom: -3px; width: 6px; height: 6px; background: var(--pr-white); }
+.hm-help { position: absolute; left: 50%; bottom: calc(10 * var(--px)); transform: translateX(-50%); color: var(--pr-t3); font-size: calc(10 * var(--px)); white-space: nowrap; pointer-events: none; }
+.pr-lane.off { opacity: .35; }
+
+/* arrangement labels: 10 px in the grid only, and a word never breaks */
+.pr-picto > button b { font-size: calc(10 * var(--px)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+
+/* a beat the mock only estimates is drawn as one: dashed, hollow, until the engine says */
+.pr-block.est { background: transparent; opacity: 1; box-shadow: none; border: 1px dashed var(--c, var(--pr-t3)); }
+
+/* ---- home: the photo well, the face beside the layers, the curve editor stand-in ---- */
+.hm-well { position: relative; margin: calc(8 * var(--px)) var(--pr-pad) 0 calc(12 * var(--px)); border: 1px solid var(--pr-hair); background: var(--pr-field); }
+.hm-well img { display: block; width: 100%; height: auto; }
+.hm-well .acts { display: flex; align-items: center; gap: calc(6 * var(--px)); padding: calc(6 * var(--px)); border-top: 1px solid var(--pr-hair); color: var(--pr-t3); font-size: calc(11 * var(--px)); }
+.hm-well .acts span { margin-left: auto; text-align: right; }
+.hm-well.over, .hm-canvas.over .hm-field { outline: 1px dashed var(--pr-white); outline-offset: -2px; }
+.hm-who { display: grid; grid-template-columns: calc(44 * var(--px)) 1fr; gap: calc(8 * var(--px)); align-items: center; margin: 0 var(--pr-pad) calc(4 * var(--px)) calc(12 * var(--px)); cursor: default; }
+.hm-who img { width: calc(44 * var(--px)); height: calc(56 * var(--px)); object-fit: cover; border: 1px solid var(--pr-hair); background: var(--pr-field); }
+.hm-who b { display: block; color: var(--pr-t1); font-weight: 600; }
+.hm-who span { color: var(--pr-t3); font-size: calc(11 * var(--px)); }
+.hm-who:hover b { color: var(--pr-white); }
+.pr-transport.split { grid-template-columns: 1fr minmax(calc(380 * var(--px)), 34%); grid-template-rows: calc(32 * var(--px)) auto; }
+.pr-transport.split .pr-tbar { grid-column: 1 / -1; }
+.hm-curve { position: relative; border-left: 1px solid var(--pr-hair); display: grid; grid-template-rows: calc(26 * var(--px)) 1fr; min-height: calc(160 * var(--px)); }
+.hm-curve.est { outline: 1px dashed var(--pr-t3); outline-offset: -1px; }
+.hm-curve .hd { display: flex; align-items: center; gap: calc(10 * var(--px)); padding: 0 calc(10 * var(--px)); border-bottom: 1px solid var(--pr-hair-2); }
+.hm-curve .hd .t { font: var(--pr-caps); letter-spacing: var(--pr-track); text-transform: uppercase; color: var(--pr-t2); }
+.hm-curve .hd .ph { font-size: calc(10 * var(--px)); color: var(--pr-t3); border: 1px dashed var(--pr-t3); padding: 0 calc(5 * var(--px)); }
+.hm-curve .hd .who { margin-left: auto; color: var(--pr-t1); font-size: calc(11 * var(--px)); }
+.hm-curve .bd { display: grid; grid-template-columns: calc(84 * var(--px)) 1fr calc(150 * var(--px)); min-height: 0; }
+.hm-curve .props { border-right: 1px solid var(--pr-hair-2); padding: calc(4 * var(--px)) 0; }
+.hm-curve .props div { padding: 0 calc(10 * var(--px)); height: calc(22 * var(--px)); line-height: calc(22 * var(--px)); color: var(--pr-t2); font-size: calc(11 * var(--px)); }
+.hm-curve .props div.on { color: var(--pr-t1); background: var(--pr-hover); box-shadow: inset 2px 0 0 var(--pr-white); }
+.hm-curve .graph { position: relative; padding: calc(8 * var(--px)) calc(24 * var(--px)) calc(8 * var(--px)) calc(8 * var(--px)); }
+.hm-curve .graph svg { width: 100%; height: 100%; overflow: visible; }
+.hm-curve .scale { position: absolute; right: calc(6 * var(--px)); top: calc(8 * var(--px)); bottom: calc(8 * var(--px)); display: flex; flex-direction: column; justify-content: space-between; font: calc(10 * var(--px)) / 1 var(--pr-mono); color: var(--pr-t3); }
+.hm-curve .side { border-left: 1px solid var(--pr-hair-2); padding: calc(6 * var(--px)) calc(8 * var(--px)); display: flex; flex-direction: column; gap: calc(4 * var(--px)); }
+.hm-curve .side .pr-seg { flex-wrap: wrap; height: auto; }
+.hm-curve .side .pr-seg > button { flex: 1 1 30%; height: calc(20 * var(--px)); line-height: calc(18 * var(--px)); margin: 0 -1px -1px 0; }
+.hm-curve .side .pr-row { grid-template-columns: calc(48 * var(--px)) 1fr calc(44 * var(--px)); }
+.hm-curve .side .acts { display: flex; gap: calc(4 * var(--px)); margin-top: auto; }
+
+/* ---- the curve editor (After Effects grammar) ---- */
+.hm-curve.live { outline: none; }
+.hm-curve .bd { grid-template-columns: calc(84 * var(--px)) 1fr; }
+.ce { display: grid; grid-template-rows: auto 1fr auto; height: 100%; min-height: calc(150 * var(--px)); }
+.ce-top { display: flex; align-items: center; gap: calc(8 * var(--px)); padding: calc(4 * var(--px)) calc(8 * var(--px)); border-bottom: 1px solid var(--pr-hair-2); }
+.ce-top .pr-seg > button { padding: 0 calc(6 * var(--px)); }
+.ce-msg { margin-left: auto; color: var(--pr-white); font-size: calc(11 * var(--px)); }
+.ce-body { position: relative; padding: calc(6 * var(--px)) calc(26 * var(--px)) calc(14 * var(--px)) calc(8 * var(--px)); min-height: 0; }
+.ce-body svg { width: 100%; height: 100%; overflow: visible; outline: none; cursor: crosshair; }
+.ce-body .ax { stroke: rgba(255,255,255,.12); vector-effect: non-scaling-stroke; }
+.ce-body .ax.d { stroke-dasharray: 2 2; }
+.ce-body .cv { fill: none; stroke-width: 1.4; vector-effect: non-scaling-stroke; }
+.ce-body .hl { stroke: rgba(255,255,255,.35); vector-effect: non-scaling-stroke; }
+.ce-body .h { fill: #0A0A0A; stroke: rgba(255,255,255,.75); vector-effect: non-scaling-stroke; cursor: grab; }
+.ce-body .pt { fill: #0A0A0A; stroke: var(--pr-white); vector-effect: non-scaling-stroke; cursor: move; }
+.ce-body .pt.on { fill: var(--pr-white); }
+.ce-body .box { fill: rgba(255,255,255,.06); stroke: rgba(255,255,255,.4); stroke-dasharray: 2 2; vector-effect: non-scaling-stroke; }
+.ce-scale { position: absolute; right: calc(8 * var(--px)); top: calc(6 * var(--px)); bottom: calc(14 * var(--px)); display: flex; flex-direction: column; justify-content: space-between; font: calc(10 * var(--px)) / 1 var(--pr-mono); color: var(--pr-t3); }
+.ce-axis { position: absolute; left: calc(8 * var(--px)); right: calc(26 * var(--px)); bottom: calc(2 * var(--px)); display: flex; justify-content: space-between; font: calc(10 * var(--px)) / 1 var(--pr-mono); color: var(--pr-t3); }
+.ce-hover { position: absolute; top: calc(8 * var(--px)); transform: translateX(-50%); font: calc(10 * var(--px)) / 1 var(--pr-mono); color: var(--pr-t2); pointer-events: none; white-space: nowrap; }
+.ce-help { padding: calc(3 * var(--px)) calc(8 * var(--px)); border-top: 1px solid var(--pr-hair-2); color: var(--pr-t3); font-size: calc(10 * var(--px)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pr-lane svg path { stroke-width: 1.2; }
+
+/* review fixes v0.0.12.1: the open editor is capped, the preset is a pop-up */
+.pr-transport.split { grid-template-rows: calc(32 * var(--px)) calc(220 * var(--px)); }
+.pr-transport.split .pr-tl { overflow: auto; }
+.pr-transport.split .hm-curve { height: calc(220 * var(--px)); min-height: 0; }
+.hm-curve .bd { min-height: 0; overflow: hidden; }
+.ce { min-height: 0; }
+.ce-lbl { color: var(--pr-t3); font-size: calc(11 * var(--px)); }
+.pr-menu .dim { color: var(--pr-t3); }
+
+/* the tool's own graph in the pane */
+.hm-hermite { padding: calc(6 * var(--px)) calc(26 * var(--px)) calc(14 * var(--px)) calc(8 * var(--px)); }
+.hm-hermite canvas { display: block; width: calc(100% - 0px); height: 100%; background: transparent; }
+.ce-top .pr-seg { height: calc(20 * var(--px)); }
+.ce-top .pr-seg > button { line-height: calc(18 * var(--px)); padding: 0 calc(8 * var(--px)); }
+
+/* review: one header row in the pane, the graph gets the height, Manual never truncates */
+.pr-transport.split { grid-template-rows: calc(32 * var(--px)) calc(240 * var(--px)); }
+.pr-transport.split .hm-curve { height: calc(240 * var(--px)); grid-template-rows: auto 1fr; }
+.hm-curve .hd { display: none; }
+.hm-curve .bd { grid-template-rows: 1fr; }
+.ce { grid-template-rows: calc(26 * var(--px)) minmax(calc(120 * var(--px)), 1fr) auto; }
+.ce-top { flex-wrap: nowrap; height: calc(26 * var(--px)); padding: 0 calc(8 * var(--px)); gap: calc(6 * var(--px)); }
+.ce-top .pr-seg > button { flex: 0 0 auto; padding: 0 calc(10 * var(--px)); overflow: visible; text-overflow: clip; }
+.ce-top .ce-msg { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; text-align: right; }
+.ce-help { display: none; }
+
+/* the + at Layers */
+.hm-add { margin-left: calc(6 * var(--px)); width: calc(18 * var(--px)); height: calc(18 * var(--px)); display: grid; place-items: center; color: var(--pr-t2); border: 1px solid var(--pr-hair); }
+.hm-add:hover { color: var(--pr-white); border-color: var(--pr-t2); }
+
+/* the selection, where the engine says it is */
+.hm-outline { position: absolute; border: 1px solid var(--pr-white); box-shadow: 0 0 0 1px rgba(0,0,0,.6); pointer-events: none; z-index: 3; }
+.hm-outline::after { content: ""; position: absolute; right: -3px; bottom: -3px; width: 6px; height: 6px; background: var(--pr-white); }
+
+/* the ? sheet */
+.hm-sheet { position: fixed; right: calc(20 * var(--px)); bottom: calc(60 * var(--px)); width: calc(340 * var(--px)); background: #0d0d0d; border: 1px solid var(--pr-hair); z-index: 60; font: calc(12 * var(--px)) / calc(16 * var(--px)) var(--pr-font); color: var(--pr-t2); }
+.hm-sheet .pr-head .x { margin-left: auto; color: var(--pr-t3); font-size: calc(14 * var(--px)); }
+.hm-sheet .rows { padding: calc(6 * var(--px)) calc(12 * var(--px)) calc(10 * var(--px)); display: grid; gap: calc(4 * var(--px)); }
+.hm-sheet .rows div { display: grid; grid-template-columns: calc(140 * var(--px)) 1fr; gap: calc(8 * var(--px)); }
+.hm-sheet .rows b { color: var(--pr-t1); font-family: var(--pr-mono); font-weight: 400; font-size: calc(11 * var(--px)); }
+
+/* 6b: the Irises group opens to its years, nested like a Figma group */
+.hm-layer .chev { width: calc(14 * var(--px)); height: calc(14 * var(--px)); display: grid; place-items: center; color: var(--pr-t3); background: none; border: 0; padding: 0; cursor: pointer; }
+.hm-layer .chev svg { transition: transform .12s; }
+.hm-layer .chev.open svg { transform: rotate(90deg); }
+.hm-layer:has(.chev) { grid-template-columns: auto auto auto auto 1fr; }
+.hm-layer.sub { padding-left: calc(46 * var(--px)); grid-template-columns: auto auto 1fr; }
+.hm-layer.sub .x { position: absolute; right: calc(4 * var(--px)); }
+.hm-layer.sub:hover .wh { opacity: 0; }
+.hm-layer.sub .star { width: calc(14 * var(--px)); background: none; border: 0; padding: 0; color: var(--pr-t3); font-size: calc(11 * var(--px)); cursor: pointer; }
+.hm-layer.sub .star.on { color: var(--pr-t1); }
+.hm-layer.sub .x { margin-left: auto; width: calc(14 * var(--px)); background: none; border: 0; padding: 0; color: var(--pr-t3); cursor: pointer; opacity: 0; }
+.hm-layer.sub:hover .x { opacity: 1; }
+.hm-layer.sub .wh { margin-left: 0; }
+
+/* the lanes' beats: box → mark → type on → hold → type off, from the engine */
+.pr-beat { position: absolute; top: 50%; transform: translateY(-50%); height: calc(12 * var(--px)); box-sizing: border-box; }
+.pr-beat.box { height: calc(4 * var(--px)); background: var(--c); opacity: .45; }
+.pr-beat.type, .pr-beat.off { color: var(--pr-t1); font: calc(10 * var(--px)) / calc(12 * var(--px)) var(--pr-mono); letter-spacing: .08em; text-transform: uppercase; padding: 0 calc(4 * var(--px)); overflow: hidden; white-space: nowrap; }
+.pr-beat.type { background: linear-gradient(90deg, transparent, var(--c)); opacity: .8; }
+.pr-beat.hold { background: var(--c); color: #000; font: calc(10 * var(--px)) / calc(12 * var(--px)) var(--pr-mono); letter-spacing: .08em; text-transform: uppercase; padding: 0 calc(4 * var(--px)); overflow: hidden; white-space: nowrap; }
+.pr-beat.off { background: linear-gradient(90deg, var(--c), transparent); opacity: .6; }
+/* read-only rows: the transport owns the frame and the run time */
+.pr-ro { color: var(--pr-t1); font: calc(12 * var(--px)) / calc(16 * var(--px)) var(--pr-mono); }
+.pr-ro.dim { color: var(--pr-t3); margin-left: calc(8 * var(--px)); font-size: calc(10 * var(--px)); }
+.pr-ro small { color: var(--pr-t3); margin-left: 2px; }
+/* the looks: save row, list, arrangement */
+.hm-save { display: grid; grid-template-columns: 1fr auto; gap: calc(6 * var(--px)); padding: calc(6 * var(--px)) var(--pr-pad) 0 calc(12 * var(--px)); }
+.hm-save .pr-field { min-width: 0; }
+.hm-lookList { display: grid; padding: calc(4 * var(--px)) 0; }
+.hm-lookList button { display: flex; align-items: center; gap: calc(6 * var(--px)); height: calc(24 * var(--px)); padding: 0 var(--pr-pad) 0 calc(12 * var(--px)); background: none; border: 0; color: var(--pr-t2); font: calc(12 * var(--px)) / 1 var(--pr-font); text-align: left; cursor: pointer; }
+.hm-lookList button:hover { color: var(--pr-t1); }
+.hm-lookList button.on { background: var(--pr-on, #E9E7E3); color: #000; }
+.hm-lookList .hm-hint { padding: 0 calc(12 * var(--px)); }
+.pr-head.sub { padding-top: calc(6 * var(--px)); }
+.pr-tc .len { width: calc(44 * var(--px)); background: none; border: 0; border-bottom: 1px solid var(--pr-hair); color: inherit; font: inherit; text-align: right; padding: 0; outline: none; }
+.pr-tc .len:focus { border-bottom-color: var(--pr-t1); }
+.hm-lookList button { height: auto; min-height: calc(28 * var(--px)); padding-top: calc(3 * var(--px)); padding-bottom: calc(3 * var(--px)); }
+.hm-lookList .still { width: calc(22 * var(--px)); height: calc(30 * var(--px)); background: var(--pr-field); border: 1px solid var(--pr-hair); flex: none; overflow: hidden; }
+.hm-lookList .still img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.hm-lookList .nm { display: grid; line-height: calc(14 * var(--px)); }
+.hm-lookList .nm small { color: var(--pr-t3); font-size: calc(10 * var(--px)); }
+.hm-lookList button.on .nm small { color: rgba(0,0,0,.6); }
+
+/* the timeline is bounded: 0 → run time, the loop edge drawn, nothing past it; and it folds to the bar */
+.pr-tl { padding-right: calc(24 * var(--px)); }
+.pr-ruler { background: repeating-linear-gradient(90deg, var(--pr-hair) 0 1px, transparent 1px 12.5%); background-size: calc(100% + 1px) 100%; }
+.pr-ruler .end { transform: translateX(calc(-100% - 3px)); color: var(--pr-t2); }
+.pr-end { position: absolute; top: 0; bottom: calc(8 * var(--px)); left: calc(100% - 24 * var(--px)); width: 1px; background: var(--pr-t2); z-index: 1; pointer-events: none; }
+.pr-end::after { content: ""; position: absolute; top: 0; bottom: 0; left: 1px; width: calc(24 * var(--px)); background: repeating-linear-gradient(135deg, var(--pr-hair-2) 0 2px, transparent 2px 6px); }
+.pr-lane { margin-right: 0; }
+.pr-transport.folded { grid-template-rows: calc(32 * var(--px)); }
+.pr-transport.folded .pr-tl, .pr-transport.folded .hm-curve { display: none; }
+.pr-tbar { grid-template-columns: auto auto auto 1fr auto auto auto; }
+.pr-tbar .fold { width: calc(20 * var(--px)); height: calc(24 * var(--px)); display: grid; place-items: center; color: var(--pr-t3); }
+.pr-tbar .fold:hover { color: var(--pr-t1); }
+.pr-tbar .fold svg { width: calc(10 * var(--px)); height: calc(10 * var(--px)); fill: none; stroke: currentColor; stroke-width: 1.4; }
+.pr-beat { cursor: grab; }
+.pr-beat:active { cursor: grabbing; }
+.pr-beat.type, .pr-beat.hold, .pr-beat.off { box-shadow: inset 2px 0 0 rgba(255,255,255,.35), inset -2px 0 0 rgba(255,255,255,.35); }
+
+/* the control tree: action rows, the More head */
+.pr-row.acts { height: auto; min-height: var(--pr-row); }
+.pr-row.acts .w { display: flex; flex-wrap: wrap; gap: calc(4 * var(--px)); }
+.pr-row .pr-field.hex { width: calc(72 * var(--px)); }
+/* type rule (UI-AUDIT section 8): inside a row, labels AND values are the system sans with tabular figures; PMA stays on heads, the mark, the transport */
+.pr-row > .v { font-family: var(--pr-font); }
+
+/* the stage: seated, not pasted (a hairline at 10% and a soft ground shadow); nothing over the work */
+.hm-frame { box-shadow: 0 0 0 1px rgba(255,255,255,.10), 0 24px 64px rgba(0,0,0,.6); }
+/* no text selection on the timeline; hover states on lanes, blocks and layer rows */
+.pr-tl, .pr-lanes, .pr-ruler, .pr-beat, .pr-block, .hm-layers { user-select: none; -webkit-user-select: none; }
+.pr-lane:hover { background: var(--pr-hover); }
+.pr-beat:hover { filter: brightness(1.18); }
+.hm-layer:hover { background: var(--pr-hover); }
+/* a channel lane at lane height: the curve with a badge, or a flat bar */
+.pr-lane.ch svg { top: calc(4 * var(--px)); bottom: calc(4 * var(--px)); height: auto; }
+.pr-lane.ch .pr-beat.flat { background: none; box-shadow: inset 0 0 0 1px var(--pr-hair); color: var(--pr-t3); cursor: default; }
+.pr-badge { position: absolute; right: calc(6 * var(--px)); top: 50%; transform: translateY(-50%); font: calc(10 * var(--px)) / 1 var(--pr-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--pr-t3); border: 1px solid var(--pr-hair); padding: calc(2 * var(--px)) calc(4 * var(--px)); pointer-events: none; }
+/* the photo in its layer row */
+.hm-layer img.thumb { width: calc(14 * var(--px)); height: calc(18 * var(--px)); object-fit: cover; border: 1px solid var(--pr-hair); }
+/* the status line: what just happened, in the tool's own words */
+.pr-bar { grid-template-columns: 1fr auto 1fr; }
+.pr-bar .l { min-width: 0; }
+.pr-status { min-width: 0; margin-left: calc(4 * var(--px)); color: var(--pr-t3); font-size: calc(11 * var(--px)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40vw; }
+.pr-status.go { color: var(--pr-t2); }
+.pr-status.bad { color: #ff7a6e; }
+/* the unsaved dot */
+.hm-lookList .dot { display: inline-block; width: calc(6 * var(--px)); height: calc(6 * var(--px)); border-radius: 50%; background: var(--pr-white); margin-right: calc(5 * var(--px)); vertical-align: middle; }
+.hm-lookList button.on .dot { background: #000; }
+
+/* never truncate a label: it wraps to a second line and the row grows (the review, 11 Sep) */
+.pr-row { height: auto; min-height: var(--pr-row); }
+.pr-row > .k { white-space: normal; overflow: visible; text-overflow: clip; line-height: calc(14 * var(--px)); padding: calc(3 * var(--px)) 0; }
+
+/* presets travel: the export / import sheet */
+.hm-sheet.presets { width: calc(520 * var(--px)); right: auto; left: calc(20 * var(--px)); bottom: auto; top: calc(60 * var(--px)); }
+.hm-sheet.presets .pr-head .pr-ro.dim { margin-left: calc(8 * var(--px)); }
+.hm-sheet.presets .cols { display: grid; grid-template-columns: 1fr 1fr; gap: calc(12 * var(--px)); padding: calc(6 * var(--px)) calc(12 * var(--px)); max-height: 50vh; overflow: auto; }
+.hm-sheet.presets .hd { font: var(--pr-caps); letter-spacing: var(--pr-track); text-transform: uppercase; color: var(--pr-t3); padding: calc(4 * var(--px)) 0; }
+.hm-sheet.presets .row { display: block; padding: calc(2 * var(--px)) 0; }
+.hm-sheet.presets .none { color: var(--pr-t3); }
+.hm-sheet.presets .acts { display: flex; align-items: center; gap: calc(6 * var(--px)); padding: calc(8 * var(--px)) calc(12 * var(--px)) calc(10 * var(--px)); border-top: 1px solid var(--pr-hair); }
+.hm-sheet.presets .acts .pr-ro.dim { margin-left: auto; }
+
+/* a channel that follows another */
+.pr-badge.link { right: auto; left: calc(6 * var(--px)); color: var(--pr-t2); border-color: var(--pr-t3); }
+.pr-btn.off { opacity: .4; }
+
+/* ---- the user's own space: resizable panes (Ryan, 11 Sep 2026) ---- */
+.pr-body { grid-template-columns: var(--side, var(--pr-side)) 0 1fr 0 var(--insp, var(--pr-insp)); }
+.hm-grip { position: relative; z-index: 5; background: transparent; }
+.hm-grip.v { width: 0; cursor: col-resize; }
+.hm-grip.v::before { content: ""; position: absolute; top: 0; bottom: 0; left: calc(-4 * var(--px)); width: calc(8 * var(--px)); }
+.hm-grip.v::after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 1px; background: transparent; transition: background .12s; }
+.hm-grip.v:hover::after, .hm-grip.v:active::after { background: var(--pr-t2); }
+.hm-grip.h { position: absolute; left: 0; right: 0; top: 0; height: 0; cursor: row-resize; z-index: 6; }
+.hm-grip.h::before { content: ""; position: absolute; left: 0; right: 0; top: calc(-4 * var(--px)); height: calc(8 * var(--px)); }
+.hm-grip.h::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 1px; background: transparent; transition: background .12s; }
+.hm-grip.h:hover::after, .hm-grip.h:active::after { background: var(--pr-t2); }
+.pr-transport { position: relative; grid-template-rows: calc(32 * var(--px)) var(--tl, auto); max-height: 70vh; }
+.pr-transport:not(.folded) .pr-tl { overflow: auto; height: var(--tl, auto); max-height: calc(70vh - 32 * var(--px)); }
+.pr-transport.split { grid-template-columns: 1fr 0 var(--curve, minmax(calc(380 * var(--px)), 34%)); grid-template-rows: calc(32 * var(--px)) var(--tl, calc(280 * var(--px))); }
+.pr-transport.split .pr-tbar { grid-column: 1 / -1; }
+.pr-transport.split .hm-curve { height: var(--tl, calc(280 * var(--px))); }
+.hm-grip.curve { grid-row: 2; }
+/* the curve editor never cut off: its header wraps, the graph takes what is left, the pane scrolls before it clips */
+.ce-top { flex-wrap: wrap; height: auto; min-height: calc(26 * var(--px)); row-gap: calc(2 * var(--px)); padding: calc(2 * var(--px)) calc(8 * var(--px)); }
+.ce { grid-template-rows: auto minmax(calc(100 * var(--px)), 1fr) auto; }
+.hm-curve { min-width: 0; overflow: hidden; }
+
+/* the graph takes the pane's height: the editor host fills the body (it was sizing to its own content and collapsing to the minimum) */
+.hm-curve .bd { grid-template-rows: minmax(0, 1fr); }
+.ce-host { height: 100%; min-height: 0; display: grid; grid-template-rows: minmax(0, 1fr); }
+.ce { height: 100%; min-height: 0; }
+.ce-body, .hm-hermite { min-height: 0; height: auto; }
+/* the pane's one visible row is the body (the header row is hidden), so the body gets the whole height */
+.pr-transport.split .hm-curve { grid-template-rows: minmax(0, 1fr); }
+.hm-curve .hd { display: none; }
+/* the split's three columns, placed by name (the grip's explicit row was auto-placing it into column 1 and squeezing the lanes to nothing) */
+.pr-transport.split .pr-tl { grid-column: 1; grid-row: 2; min-width: 0; }
+.pr-transport.split .hm-grip.curve { grid-column: 2; grid-row: 2; }
+.pr-transport.split .hm-curve { grid-column: 3; grid-row: 2; }
+.pr-transport.split .pr-tbar { grid-row: 1; }
+
+/* stress-test fixes: the pane's amount / rate line, the colour picker behind the swatch, the line's ×, a scroll cue on the sidebar */
+.ce-top.amounts { display: grid; grid-template-columns: 1fr 1fr; gap: calc(12 * var(--px)); padding: calc(2 * var(--px)) calc(8 * var(--px)); }
+.ce-top.amounts .pr-row { grid-template-columns: calc(52 * var(--px)) 1fr calc(56 * var(--px)); height: calc(22 * var(--px)); min-height: 0; }
+.pr-swatch { cursor: pointer; position: relative; overflow: hidden; }
+.pr-swatch input.pick { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+.hm-layer .x { margin-left: auto; width: calc(14 * var(--px)); background: none; border: 0; padding: 0; color: var(--pr-t3); cursor: pointer; opacity: 0; position: absolute; right: calc(4 * var(--px)); }
+.hm-layer:hover .x { opacity: 1; }
+.hm-layer:hover .wh { opacity: 0; }
+.hm-layer.sub { padding-left: calc(12 * var(--px)); }
+.pr-side { mask-image: linear-gradient(#000 calc(100% - 24px), transparent); -webkit-mask-image: linear-gradient(#000 calc(100% - 24px), transparent); }
+.pr-undo button:disabled { opacity: .3; cursor: default; }
+.pr-row > .v { cursor: default; }
+
+/* v0.1.32 -- the rail: a text button in a section head (Shuffle the scene, Save artist); the artists' shelf */
+.pr-head .hm-txt { margin-left: auto; height: calc(18 * var(--px)); padding: 0 calc(7 * var(--px)); border: 1px solid var(--pr-hair); background: none; color: var(--pr-t2); font: inherit; font-size: calc(10 * var(--px)); letter-spacing: .02em; white-space: nowrap; cursor: pointer; }
+.pr-head .hm-txt:hover { color: var(--pr-t1); border-color: var(--pr-t3); }
+.pr-head .hm-txt + .hm-add { margin-left: calc(4 * var(--px)); }
+.hm-hint.pad { padding: calc(2 * var(--px)) var(--pr-pad) calc(6 * var(--px)) calc(12 * var(--px)); }
+.hm-artists button { justify-content: space-between; }
+.hm-artists .x { font-style: normal; color: var(--pr-t3); padding: 0 calc(4 * var(--px)); cursor: pointer; }
+.hm-artists .x:hover { color: var(--pr-t1); }
+.hm-artists button.on .x { color: rgba(0,0,0,.55); }
+
+/* v0.1.36 -- the tool's pen is down: the pointer goes through to the frame */
+.hm-frame.pen .hm-zones { pointer-events: none; }
+.hm-frame.pen .pr-live { pointer-events: auto; }   /* the live frame takes the pointer while the tool's pen is down */
+.hm-frame.pen { box-shadow: 0 0 0 2px var(--pr-white), 0 24px 64px rgba(0,0,0,.6); }
+.hm-help.pen { color: var(--pr-t1); }

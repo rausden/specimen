@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SPECIMEN</title>
+<link rel="stylesheet" href="vendor/bezel.css">
+<link rel="stylesheet" href="vendor/pitch.css">
+<link rel="stylesheet" href="vendor/pro.css">
+<link rel="stylesheet" href="specimen.css">
+<script>window.SPECIMEN_STATIC = true;</script>
+<script src="icons.js"></script>
+</head>
+<body class="bz pr">
+<div class="pr-app sp-app" id="app">
+
+  <div class="pr-bar">
+    <div class="l">
+      <span class="pt-mark">SPECIMEN</span>
+      <span class="name">Atlas of Type</span>
+    </div>
+    <div class="pr-tabs tools" id="tabs">
+      <button data-tab="typefaces" class="on">Typefaces</button>
+      <button data-tab="foundries">Foundries</button>
+      <button data-tab="designers">Designers</button>
+    </div>
+    <div class="r">
+      <input class="pr-field sp-search" id="q" type="search" placeholder="Search names, foundries, designers" spellcheck="false" autocomplete="off">
+      <div class="pr-seg" id="view">
+        <button data-view="grid" class="on" title="Grid">Grid</button>
+        <button data-view="list" title="List">List</button>
+      </div>
+      <div class="pr-seg" id="size">
+        <button data-size="s">S</button>
+        <button data-size="m" class="on">M</button>
+        <button data-size="l">L</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="pr-body">
+    <aside class="pr-side" id="side"></aside>
+    <section class="pr-stage sp-stage" id="stage">
+      <div class="sp-head" id="head"></div>
+      <div class="sp-scroll" id="scroll"><div class="sp-canvas" id="canvas"></div></div>
+    </section>
+    <aside class="pr-insp" id="insp"></aside>
+  </div>
+
+  <div class="sp-foot" id="foot"></div>
+</div>
+<div class="sp-probe" id="probe"></div>
+<script src="app.js"></script>
+</body>
+</html>
